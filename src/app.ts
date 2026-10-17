@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, {
   type Request,
   type Response,
@@ -5,23 +6,43 @@ import express, {
 } from "express";
 import cors from "cors";
 import mongoose from "mongoose";
+import { connectDB } from "./config/db";
 import { authRouter } from "./routes/auth";
+import { courseRouter } from "./routes/courses";
 import { submissionRouter } from "./routes/submissions";
 
-// Builds the app and stops. Never opens a port, never touches the DB.
+// Builds the app and stops. Never opens a port.
 export const app = express();
 
-// Lets the Vite app on :5173 read replies from :4000. Postman never needs it.
-app.use(cors());
+// Only the origins listed in CORS_ORIGIN may read replies from this API.
+// Comma-separated, so the list differs between laptop and Vercel without
+// the code knowing which it is. Read once at import: changing it on
+// Vercel needs a redeploy. Unset means an empty list, so nothing passes.
+const ALLOWED_ORIGINS = (process.env.CORS_ORIGIN ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin !== "");
+
+app.use(cors({ origin: ALLOWED_ORIGINS }));
 
 // Creates req.body from JSON bodies (only when Content-Type: application/json).
 app.use(express.json());
+
+// Deployed there is no startup step -- the app IS the function and a
+// request is the first thing that happens. So waiting for the database
+// moves here, in front of every route. After the first request this
+// awaits a promise that has already resolved.
+app.use(async (_req: Request, _res: Response, next: NextFunction) => {
+  await connectDB();
+  next();
+});
 
 app.get("/api/health", (_req: Request, res: Response) => {
   res.json({ ok: true, db: mongoose.connection.readyState === 1 });
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/courses", courseRouter);
 app.use("/api/submissions", submissionRouter);
 
 // 404 for unknown paths, as JSON. MUST be after all routers.
@@ -56,3 +77,7 @@ app.use(
     res.status(500).json({ message: "Something went wrong" });
   },
 );
+
+// Vercel looks for the Express app in app.ts and wants it as the default
+// export. That is the whole deployment config, so there is no vercel.json.
+export default app;
