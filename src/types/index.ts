@@ -47,6 +47,12 @@ export type SubmissionDoc = Omit<Submission, "id" | "studentId"> & {
   studentId: Types.ObjectId;
 };
 
+// Course has no id (the code is its identity), so nothing is renamed or
+// left out. Pick still has to name all four fields: it builds a mapped
+// type, and the toJSON transform in Course.ts takes a Record, which an
+// interface is not assignable to.
+export type CourseDoc = Pick<Course, "code" | "title" | "units" | "semester">;
+
 // The body a client sends to create one. No id (MongoDB makes it) and no
 // studentId (the server reads it from the token).
 export type NewSubmissionBody = Pick<Submission, "courseCode" | "repoUrl">;
