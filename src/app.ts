@@ -10,6 +10,7 @@ import { connectDB } from "./config/db";
 import { authRouter } from "./routes/auth";
 import { courseRouter } from "./routes/courses";
 import { submissionRouter } from "./routes/submissions";
+import { aiRouter } from "./routes/ai";
 
 // Builds the app and stops. Never opens a port.
 export const app = express();
@@ -44,6 +45,8 @@ app.get("/api/health", (_req: Request, res: Response) => {
 app.use("/api/auth", authRouter);
 app.use("/api/courses", courseRouter);
 app.use("/api/submissions", submissionRouter);
+// Private, rate limited, and the only route that talks to Gemini.
+app.use("/api/ai", aiRouter);
 
 // 404 for unknown paths, as JSON. MUST be after all routers.
 app.use((req: Request, res: Response) => {
